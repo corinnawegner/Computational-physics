@@ -1,3 +1,4 @@
+#include "stdio.h"
 #include <stdlib.h>
 #include <math.h>
 #define DIM 3
@@ -126,17 +127,89 @@ void verlet_step(float (*r_prior)[3], float (*v_prior)[3], int t, int M, float r
     }
 }
 
-int main(int argc, char *argv[ ]) { //argv: [M, rho, r_0, v_0]
-    int M = atoi(argv[1]);
-    float rho = atof(argv[2]);
+float* readArrayFromFile(const char* filename, int* size) {
+    printf(filename);
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Error opening file");
+        return NULL;
+    }
 
+    // Get the size of the array
+    if (fscanf(file, "%d", size) != 1) {
+        fprintf(stderr, "Error reading array size from file\n");
+        fclose(file);
+        return NULL;
+    }
+
+    printf(" Size: ");
+    printf("%d", size);
+
+    // Allocate memory for the array
+    float* array = (float*)malloc(*size * sizeof(float));
+    if (array == NULL) {
+        fprintf(stderr, "Memory allocation error\n");
+        fclose(file);
+        return NULL;
+    }
+
+    // Read the array elements
+    for (int i = 0; i < *size; ++i) {
+        if (fscanf(file, "%f", &array[i]) != 1) {
+            fprintf(stderr, "Error reading array element from file\n");
+            free(array);
+            fclose(file);
+            return NULL;
+        }
+    }
+
+    // Close the file
+    fclose(file);
+
+    return array;
+}
+
+int main(int argc, char *argv[ ]) { //argv: [M, rho, r_0, v_0]
+
+    int size1 = 684*3;
+    int size2 = 684*3;
+    float *param1 = readArrayFromFile(argv[1], 684*3);
+    float *param2 = readArrayFromFile(argv[1], 684*3);
+
+    if (param1 == NULL || param2 == NULL) {
+        fprintf(stderr, "Error reading arrays from file\n");
+        return EXIT_FAILURE;
+    }
+
+    // Your code that uses param1 and param2 goes here
+
+    printf("Array 1: ");
+    for (int i = 0; i < size1; ++i) {
+        printf("%f ", param1[i]);
+    }
+    printf("\n");
+
+    printf("Array 2: ");
+    for (int i = 0; i < size2; ++i) {
+        printf("%f ", param2[i]);
+    }
+    printf("\n");
+
+    // Free allocated memory
+    free(param1);
+    free(param2);
+
+    printf("w");
+    int M = 6; //atoi(argv[0]);
+    float rho = 0.85;//atof(argv[1]);
+    printf("h");
     float r_0[864][3];
     float v_0[864][3];
 
     for (int i = 0; i < 864; ++i) {
         for (int j = 0; j < 3; ++j) {
-            r_0[i][j] = atof(argv[3 + i*3 + j]);
-            v_0[i][j] = atof(argv[3 + 864*3 + i*3 + j]);
+            r_0[i][j] = atof(param1);
+            v_0[i][j] = atof(param2);
             result_r[0][i][j] = r_0[i][j];
             result_v[0][i][j] = v_0[i][j];
         }
@@ -146,12 +219,12 @@ int main(int argc, char *argv[ ]) { //argv: [M, rho, r_0, v_0]
     //float L = (4*6*6*6)/rho;
     //int num_timesteps = 1500;
     //int N = 864;
-
+    printf("result_r");
     for (int t = 1; t<1500; t++) {
         verlet_step(result_r[t-1], result_v[t-1], t, M, rho);
     }
 
-    //printf();
+    printf("result_r");
     free(r_0);
     free(v_0);
     free(result_r);
