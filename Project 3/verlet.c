@@ -12,12 +12,33 @@ void f_optimized(double rho);
 int m = 48;
 int M = 6;
 int list_pbc[27][3] = {
-        { 0, 0, 0 },{ 0, 0, 1 },{ 0, 0, -1 },{ 0, 1, 0 },{ 0, 1, 1 },{ 0, 1, -1 },
-        { 0, -1, 0 },{ 0, -1, 1 },{ 0, -1, -1 },{ 1, 0, 0 },{ 1, 0, 1 },
-        { 1, 0, -1 },{ 1, 1, 0 },{ 1, 1, 1 },{ 1, 1, -1 },{ 1, -1, 0 },{ 1, -1, 1 },
-        { 1, -1, -1 },{ -1, 0, 0 },{ -1, 0, 1 },{ -1, 0, -1 },
-        { -1, 1, 0 },{ -1, 1, 1 },{ -1, 1, -1 },{ -1, -1, 0 },{ -1, -1, 1 },{ -1, -1, -1 }
-};
+         0, 0, 0 ,
+         0, 0, 1 ,
+         0, 0, -1 ,
+         0, 1, 0 ,
+         0, 1, 1 ,
+         0, 1, -1 ,
+         0, -1, 0 ,
+         0, -1, 1 ,
+         0, -1, -1 ,
+         1, 0, 0 ,
+         1, 0, 1 ,
+         1, 0, -1 ,
+         1, 1, 0 ,
+         1, 1, 1 ,
+         1, 1, -1 ,
+         1, -1, 0 ,
+         1, -1, 1 ,
+         1, -1, -1 ,
+         -1, 0, 0 ,
+         -1, 0, 1 ,
+         -1, 0, -1 ,
+         -1, 1, 0 ,
+         -1, 1, 1 ,
+         -1, 1, -1 ,
+         -1, -1, 0 ,
+         -1, -1, 1 ,
+         -1, -1, -1 };
 
 vecr r_0 = {  -3.351534422148387371e+00 , -3.351534422148387371e+00 , -3.351534422148387371e+00,
               -3.351534422148387371e+00 , -3.351534422148387371e+00 , -1.675767211074193686e+00,
@@ -885,7 +906,7 @@ vecr r_0 = {  -3.351534422148387371e+00 , -3.351534422148387371e+00 , -3.3515344
               5.027301633222581501e+00 , 5.865185238759679009e+00 , 5.865185238759679009e+00
 };
 
-vecr v_0 = {9.624700717455287879e-01, 1.416305783536353502e+00, -4.250623185000266258e-01,
+vecr v_0_2 = {9.624700717455287879e-01, 1.416305783536353502e+00, -4.250623185000266258e-01,
             -4.887799554892049425e-01, -9.554254928306201711e-01, 1.489040562831287939e+00,
             -2.086546733157850497e-01, -1.044926240144433027e+00, -1.088489589776493183e-01,
             6.912483785625954669e-01, -4.771964639023621446e-01, 2.092687097096749937e+00,
@@ -1756,18 +1777,6 @@ vecr r_next;
 vecr v_next;
 double f_ij[N][N][DIM] = {};
 
-void scan_fij_for_nan(){
-    for (int i = 0; i < 864; ++i) {
-        for (int j = 0; j < 864; ++j) {
-            for (int d = 0; d < 3; ++d) {
-                if(isnan(f_ij[i][j][d])){
-                    printf("%d, %d \n", i, j);
-                }
-            }
-        }
-    }
-};
-
 void f_optimized(double rho) {
     double L = cbrt((4 * pow(M, 3) / rho));
     for (int i = 0; i < 864; i++) {                //forces reset
@@ -1780,22 +1789,21 @@ void f_optimized(double rho) {
     }
     for (int i = 0; i < 864; i++) {
         for (int j = 0; j < 864; j++) {
-            if (f_ij[i][j][0] == 0.0) {
-                //printf("%s","overwriting f");
+            if (j==i){
+            }
+            else if (f_ij[i][j][0] == 0.0) {
                 vec3 r_i;
                 vec3 r_j;
                 for (int d = 0; d < 3; d++) {
                     r_i[d] = r_current[i][d];
                     r_j[d] = r_current[j][d];
                 }
-                //Determine minimal r, but only if f_ij is zero
-                double r_ij_candidates[27] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                              0.0, 0.0,
-                                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+                double r_ij_candidates[27] = {0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                              0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
                 for (int c = 0; c < 27; c++){
                     for (int d = 0; d < 3; d++) {
-                        double diff = r_i[d] - r_j[d] + L * list_pbc[c][d];
-                        r_ij_candidates[c] += diff * diff;
+                        double diff = r_i[d] - r_j[d] + L*list_pbc[c][d];
+                        r_ij_candidates[c] += pow(diff, 2);
                     }
                 }
                 double min_val = r_ij_candidates[0];
@@ -1804,18 +1812,14 @@ void f_optimized(double rho) {
                 for (int c = 0; c < 27; c++) {
                     if (r_ij_candidates[c] < min_val) {
                         min_val = r_ij_candidates[c];
-                        printf("%f", min_val);
-                        if(min_val < 0.00001){
-                           // printf("%s \n", "min_val to zero");
-                        }
                         index_L_min = c;
-                    }
+                        }
                 }
                 for (int d = 0; d < 3; d++) {
                     vec_L_min[d] = L * list_pbc[index_L_min][d];
                     double f_d = m * (r_i[d] - r_j[d] + vec_L_min[d]) * (pow(min_val, -14) + 0.5 * pow(min_val, -8));
                     if(isnan(f_d)){
-                        printf("f_d isnan");
+                        printf("%s", "force nan error");
                     }
                     f_ij[i][j][d] = f_d;
                     f_ij[j][i][d] = (-1) * f_d;
@@ -1823,7 +1827,6 @@ void f_optimized(double rho) {
             }
         }
     }
-    printf("%s %f \n ", "f updated",f_ij[8][17][1]);
 }
 
 double F(int i, int d) { // Force that acts on particle i from all other particles
@@ -1840,7 +1843,7 @@ double F(int i, int d) { // Force that acts on particle i from all other particl
 int main() { //argv: [M, rho, r_0, v_0]
     int M = 6; //atoi(argv[0]);
     double rho = 0.85;//atof(argv[1]);
-    double T = 2;
+    double T = 0.0;
     double h = 0.016;
 
     FILE* file_r;
@@ -1851,25 +1854,28 @@ int main() { //argv: [M, rho, r_0, v_0]
     for (int i = 0; i < 864; i++) {
         for (int d = 0; d < 3; d++) {
             r_current[i][d] = r_0[i][d];
-            v_current[i][d] = v_0[i][d];
+            v_current[i][d] = 0.0; //Cold start
+            //v_current[i][d] = v_0_2[i][d];
         }
     }
+
+    f_optimized(rho);
 
     double (*functionPtrF)(int,int);
     functionPtrF = &F;
 
     vecr v_tilde;
 
-    printf("Starting Verlet");
-    for (int t = 1; t<3; t++) { // Verlet step
-        printf("\n %d \n", t);
+    printf("Starting MD simulation");
+    for (int t = 1; t<1500; t++) { // Verlet step
+        printf("%s %d \n", "Time step:", t);
         f_optimized(rho);
         for (int i = 0; i < 864; ++i){
             fprintf(file_r, "%f, %f, %f \n", r_current[i][0], r_current[i][1], r_current[i][2]);
             fprintf(file_v, "%f, %f, %f \n", v_current[i][0], v_current[i][1], v_current[i][2]);
             for (int d = 0; d < 3; ++d) {
                 double f_current = (*functionPtrF)(i, d);
-                v_tilde[i][d] = v_current[i][d] + h / (2.0 * 48) * f_current;
+                v_tilde[i][d] = v_current[i][d] + h / (2.0 * m) * f_current;
                 r_current[i][d] = r_current[i][d] + h * v_tilde[i][d];
             }
         }
@@ -1877,22 +1883,14 @@ int main() { //argv: [M, rho, r_0, v_0]
         for(int i=0; i<864; i++) {
             for (int d = 0; d < 3; d++) {
                 double f_next = (*functionPtrF)(i, d);
-                v_current[i][d] = v_tilde[i][d] + (h / (T * m)) * f_next;
-                v_current[i][d] = v_next[i][d];
-                r_current[i][d] = r_next[i][d];
-                if(isnan(r_current[i][d])){
-                    printf("r_next is nan");
-                }
-                if(isnan(r_current[i][d])){
-                    printf("v_next is nan");
-                }
+                v_current[i][d] = v_tilde[i][d] + (h / (2.0 * m)) * f_next;
             }
         }
     }
 
     printf("Finished");
     free(r_0);
-    free(v_0);
+    free(v_0_2);
     free(v_tilde);
     return 0;
 }
