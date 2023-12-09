@@ -3575,7 +3575,6 @@ double F(int i, int d) { // Force that acts on particle i from all other particl
     return F_tot;
 }
 
-
 double r_ij(int i, int j, double rho) {
     double L = cbrt((4 * pow(M, 3) / rho));
     vec3 r_i;
@@ -3605,12 +3604,13 @@ double r_ij(int i, int j, double rho) {
 }
 
 void determine_neighbors(double rho){
+    printf("determine_neighbors wird aufgerufen \n");
     double (*functionPtrrij)(int,int, double);
     functionPtrrij = (double (*)(int, int, double)) &r_ij;
+    printf("Pointer to function erstellt \n");
     for (int k = 0; k < 864; ++k) {
-        // Allocate memory for the array
         int* intArray = (int*)malloc(864 * sizeof(int));
-        // Assign the pointer to the array in the array of pointers
+        printf("intArray erstellt");
         for(int i = 0; i<864; i++){
             if(k!=i){
                 double r_ik = (*functionPtrrij)(k, i, rho);
@@ -3624,13 +3624,15 @@ void determine_neighbors(double rho){
             }
         }
         neighbors[k] = intArray;
+        //printf("intArray erstellt");
     }
+    //free(functionPtrrij);
 }
 
 int main() { //argv: [M, rho, r_0, v_0]
     int M = 6; //atoi(argv[0]);
     double rho = 0.85;//atof(argv[1]);
-    double T = 2.0;
+    //double T = 2.0;
     double h = 0.016;
 
     FILE* file_r;
@@ -3641,25 +3643,27 @@ int main() { //argv: [M, rho, r_0, v_0]
     for (int i = 0; i < 864; i++) {
         for (int d = 0; d < 3; d++) {
             r_current[i][d] = r_0[i][d];
-            //v_current[i][d] = 0.0; //Cold start
-            v_current[i][d] = v_0_2_new[i][d];
+            v_current[i][d] = 0.0; //Cold start
+            //v_current[i][d] = v_0_2_new[i][d];
         }
     }
 
+    printf("Hallo");
     determine_neighbors(rho);
+    printf("lala");
     for(int k = 0; k<864; k++){
         for (int j = 0; j<864; j++){
             if(neighbors[k][j] != 0 && neighbors[k][j] != 1){
                 printf("%s %f", "Neighborhood status unclear", neighbors[k][j]);
-            } else{
-                printf("%i" ,neighbors[k][j]);
             }
         }
     }
-    /**
+
+    printf("IDK");
     f_optimized(rho);
     double (*functionPtrF)(int,int);
     functionPtrF = &F;
+
 
     vecr v_tilde;
 
@@ -3681,6 +3685,9 @@ int main() { //argv: [M, rho, r_0, v_0]
                 double f_current = (*functionPtrF)(i, d);
                 v_tilde[i][d] = v_current[i][d] + h / (2.0 * m) * f_current;
                 r_current[i][d] = r_current[i][d] + h * v_tilde[i][d];
+                if (fabs(v_tilde[i][d]) > 100){
+                    printf("%s %i %d,: %f","Extreme velocity detected at i,d = ", i,d,v_tilde[i][d]);
+                }
             }
         }
         f_optimized(rho);
@@ -3695,10 +3702,11 @@ int main() { //argv: [M, rho, r_0, v_0]
     clock_t endTime = clock();
     double elapsedTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
     printf("%s %f", "Finished. Total calculation time:", elapsedTime);
-     **/
     free(r_0);
     free(v_0_2);
     free(v_0_2_new);
+    free(functionPtrF);
+
     //free(v_tilde);
     free(v_0_1);
     for (int k = 0; k < 864; ++k) {
