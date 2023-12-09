@@ -3,14 +3,13 @@
 #include <math.h>
 #define DIM 3
 #define N 864
+#include <time.h>
 
 typedef double vec3[DIM];
 typedef double vecr[N][DIM];
 
 void f_optimized(double rho);
 
-int m = 48;
-int M = 6;
 int list_pbc[27][3] = {
          0, 0, 0 ,
          0, 0, 1 ,
@@ -3501,11 +3500,15 @@ vecr v_0_1 = {-7.102794258913974756e-02, -9.039853034049577518e-02, 2.7507778377
 -1.601078256012791745e-01, 5.437868055976143034e-02, -1.225758908017279269e-01,
 1.854757052316431953e-01, 2.915808284770710426e-02, 9.158370711231478278e-02};
 
+int m = 48;
+int M = 6;
+int n = 16;
+double r_M = 3.3;
 vecr r_current;
 vecr v_current;
-vecr r_next;
-vecr v_next;
 double f_ij[N][N][DIM] = {};
+
+int* neighbors[864];
 
 void f_optimized(double rho) {
     double L = cbrt((4 * pow(M, 3) / rho));
@@ -3519,9 +3522,7 @@ void f_optimized(double rho) {
     }
     for (int i = 0; i < 864; i++) {
         for (int j = 0; j < 864; j++) {
-            if (j==i){
-            }
-            else if (f_ij[i][j][0] == 0.0) {
+                if (f_ij[i][j][0] == 0.0 && neighbors[i][j] == 1) { //checks if 1st: force has already been calculated 2nd: particles are in the neighborhood
                 vec3 r_i;
                 vec3 r_j;
                 for (int d = 0; d < 3; d++) {
@@ -3554,7 +3555,11 @@ void f_optimized(double rho) {
                     f_ij[i][j][d] = f_d;
                     f_ij[j][i][d] = (-1) * f_d;
                 }
-            }
+            } else {
+                    for (int d = 0; d < 3; d++) {
+                        f_ij[j][i][d] = 0;
+                    }
+                }
         }
     }
 }
@@ -3570,6 +3575,58 @@ double F(int i, int d) { // Force that acts on particle i from all other particl
     return F_tot;
 }
 
+
+double r_ij(int i, int j, double rho) {
+    double L = cbrt((4 * pow(M, 3) / rho));
+    vec3 r_i;
+    vec3 r_j;
+    for (int d = 0; d < 3; d++) {
+        r_i[d] = r_current[i][d];
+        r_j[d] = r_current[j][d];
+    }
+    double r_ij_candidates[27] = {0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    for (int c = 0; c < 27; c++) {
+        for (int d = 0; d < 3; d++) {
+            double diff = r_i[d] - r_j[d] + L * list_pbc[c][d];
+            r_ij_candidates[c] += pow(diff, 2);
+        }
+    }
+    double min_val = r_ij_candidates[0];
+    int index_L_min = 0;
+    vec3 vec_L_min = {0.0, 0.0, 0.0};
+    for (int c = 0; c < 27; c++) {
+        if (r_ij_candidates[c] < min_val) {
+            min_val = r_ij_candidates[c];
+            index_L_min = c;
+        }
+    }
+    return min_val;
+}
+
+void determine_neighbors(double rho){
+    double (*functionPtrrij)(int,int, double);
+    functionPtrrij = (double (*)(int, int, double)) &r_ij;
+    for (int k = 0; k < 864; ++k) {
+        // Allocate memory for the array
+        int* intArray = (int*)malloc(864 * sizeof(int));
+        // Assign the pointer to the array in the array of pointers
+        for(int i = 0; i<864; i++){
+            if(k!=i){
+                double r_ik = (*functionPtrrij)(k, i, rho);
+                if(r_ik < r_M) {
+                    intArray[i] = 1;
+                } else {
+                    intArray[i] = 0;
+                }
+            } else {
+                intArray[i] = 0;
+            }
+        }
+        neighbors[k] = intArray;
+    }
+}
+
 int main() { //argv: [M, rho, r_0, v_0]
     int M = 6; //atoi(argv[0]);
     double rho = 0.85;//atof(argv[1]);
@@ -3577,28 +3634,45 @@ int main() { //argv: [M, rho, r_0, v_0]
     double h = 0.016;
 
     FILE* file_r;
-    file_r = fopen("r_total_1.txt", "w+");
+    file_r = fopen("r_total_T2_neighborhood.txt", "w+");
     FILE* file_v;
-    file_v = fopen("v_total_1.txt", "w+");
+    file_v = fopen("v_total_T2_neighborhood.txt", "w+");
 
     for (int i = 0; i < 864; i++) {
         for (int d = 0; d < 3; d++) {
             r_current[i][d] = r_0[i][d];
             //v_current[i][d] = 0.0; //Cold start
-            v_current[i][d] = v_0_1[i][d];
+            v_current[i][d] = v_0_2_new[i][d];
         }
     }
 
+    determine_neighbors(rho);
+    for(int k = 0; k<864; k++){
+        for (int j = 0; j<864; j++){
+            if(neighbors[k][j] != 0 && neighbors[k][j] != 1){
+                printf("%s %f", "Neighborhood status unclear", neighbors[k][j]);
+            } else{
+                printf("%i" ,neighbors[k][j]);
+            }
+        }
+    }
+    /**
     f_optimized(rho);
-
     double (*functionPtrF)(int,int);
     functionPtrF = &F;
 
     vecr v_tilde;
 
+    clock_t startTime = clock();
     printf("Starting MD simulation");
-    for (int t = 1; t<1500; t++) { // Verlet step
+    for (int t = 1; t<500; t++) { // Verlet step
         printf("%s %d \n", "Time step:", t);
+        if (t%n == 0){
+            for (int k = 0; k < 864; ++k) {
+                free(neighbors[k]);
+            }
+            determine_neighbors(rho);
+        }
         f_optimized(rho);
         for (int i = 0; i < 864; ++i){
             fprintf(file_r, "%f, %f, %f \n", r_current[i][0], r_current[i][1], r_current[i][2]);
@@ -3618,11 +3692,17 @@ int main() { //argv: [M, rho, r_0, v_0]
         }
     }
 
-    printf("Finished");
+    clock_t endTime = clock();
+    double elapsedTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+    printf("%s %f", "Finished. Total calculation time:", elapsedTime);
+     **/
     free(r_0);
     free(v_0_2);
     free(v_0_2_new);
-    free(v_tilde);
+    //free(v_tilde);
     free(v_0_1);
+    for (int k = 0; k < 864; ++k) {
+        free(neighbors[k]);
+    }
     return 0;
 }
