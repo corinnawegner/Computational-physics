@@ -2786,19 +2786,19 @@ double scaling_factor(double T_desired){
 int main() { //argv: [M, rho, r_0, v_0]
     int M = 6; //atoi(argv[0]);
     double rho = 0.85;//atof(argv[1]);
-    double T_d = 2.0;
+    double T_d = 0.0;
     double h = 0.016;
 
     FILE* file_r;
-    file_r = fopen("r_total_T1_neighborhood_new.txt", "w+");
+    file_r = fopen("r_total_T0_rescaling.txt", "w+");
     FILE* file_v;
-    file_v = fopen("v_total_T1_neighborhood_new.txt", "w+");
+    file_v = fopen("v_total_T0_rescaling.txt", "w+");
 
     for (int i = 0; i < 864; i++) {
         for (int d = 0; d < 3; d++) {
             r_current[i][d] = r_0[i][d];
-            //v_current[i][d] = 0.0; //Cold start
-            v_current[i][d] = v_0_1[i][d];
+            v_current[i][d] = 0.0; //Cold start
+            //v_current[i][d] = v_0_1[i][d];
         }
     }
 
@@ -2831,7 +2831,9 @@ int main() { //argv: [M, rho, r_0, v_0]
             double sf = scaling_factor(T_d);
             for(int i=0; i<864; i++) {
                 for (int d = 0; d < 3; d++) {
-                    v_current[i][d] = v_current[i][d]*sf
+                    v_current[i][d] = v_current[i][d]*sf;
+                }
+            }
         }
         f_optimized(rho);
         for (int i = 0; i < 864; ++i){
