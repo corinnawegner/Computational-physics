@@ -2759,16 +2759,40 @@ void determine_neighbors(double rho){
     //free(functionPtrrij);
 }
 
+double Temperature(){
+    double T=0;
+    double v_abs[864];
+    for(int i=0; i<864; i++) {
+        double v_i = 0;
+        for (int d = 0; d < 3; d++) {
+            v_i += pow(v_current[i][d], 2);}
+    v_abs[i] = v_i;
+    }
+    double sum_v_abs = 0;
+    for (int i=0; i<864; i++){
+        sum_v_abs += v_abs[i];
+    }
+    return 16*sum_v_abs/864;
+}
+
+double scaling_factor(double T_desired){
+    double (*functionPtrT)();
+    functionPtrT = (double (*)(int, int, double)) &Temperature;
+    double T_actual = (*functionPtrT)();
+    double s = pow(T_desired/T_actual, 0.5);
+    return s;
+}
+
 int main() { //argv: [M, rho, r_0, v_0]
     int M = 6; //atoi(argv[0]);
     double rho = 0.85;//atof(argv[1]);
-    //double T = 2.0;
+    double T_d = 2.0;
     double h = 0.016;
 
-    //FILE* file_r;
-    //file_r = fopen("r_total_T1_neighborhood.txt", "w+");
-    //FILE* file_v;
-    //file_v = fopen("v_total_T1_neighborhood.txt", "w+");
+    FILE* file_r;
+    file_r = fopen("r_total_T1_neighborhood_new.txt", "w+");
+    FILE* file_v;
+    file_v = fopen("v_total_T1_neighborhood_new.txt", "w+");
 
     for (int i = 0; i < 864; i++) {
         for (int d = 0; d < 3; d++) {
@@ -2795,7 +2819,7 @@ int main() { //argv: [M, rho, r_0, v_0]
 
     clock_t startTime = clock();
     printf("Starting MD simulation \n");
-    for (int t = 1; t<500; t++) { // Verlet step
+    for (int t = 1; t<1500; t++) { // Verlet step
         printf("%s %d \n", "Time step:", t);
         if (t%n == 0){
             for (int k = 0; k < 864; ++k) {
@@ -2803,10 +2827,16 @@ int main() { //argv: [M, rho, r_0, v_0]
             }
             determine_neighbors(rho);
         }
+        if (t%20 == 0){
+            double sf = scaling_factor(T_d);
+            for(int i=0; i<864; i++) {
+                for (int d = 0; d < 3; d++) {
+                    v_current[i][d] = v_current[i][d]*sf
+        }
         f_optimized(rho);
         for (int i = 0; i < 864; ++i){
-            //fprintf(file_r, "%f, %f, %f \n", r_current[i][0], r_current[i][1], r_current[i][2]);
-            //fprintf(file_v, "%f, %f, %f \n", v_current[i][0], v_current[i][1], v_current[i][2]);
+            fprintf(file_r, "%f, %f, %f \n", r_current[i][0], r_current[i][1], r_current[i][2]);
+            fprintf(file_v, "%f, %f, %f \n", v_current[i][0], v_current[i][1], v_current[i][2]);
             for (int d = 0; d < 3; ++d) {
                 double f_current = (*functionPtrF)(i, d);
                 v_tilde[i][d] = v_current[i][d] + h / (2.0 * m) * f_current;
